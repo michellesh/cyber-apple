@@ -36,7 +36,8 @@
 #define NUM_STRANDS 6
 
 #define APPLE_LENGTH 65
-#define DRIP_LENGTH 13
+#define APPLE_LENGTH_INNER 63
+#define DRIP_LENGTH 18
 #define TOTAL_LENGTH APPLE_LENGTH + DRIP_LENGTH
 
 #define NUM_DRIPS 6
@@ -89,16 +90,18 @@ struct Drip {
   uint8_t splatColor[3];      // RGB color of "splat" (may be from prior drip)
 };
 
+/* clang-format off */
 Drip drips[] = {
-    // THIS TABLE CONTAINS INFO FOR UP TO 8 NEOPIXEL DRIPS
-//   startPixel, hidePixel,    length,           dribblePixel
-    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
-    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
-    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
-    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
-    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
-    {30,         50,           20,               20},
+// THIS TABLE CONTAINS INFO FOR UP TO 8 NEOPIXEL DRIPS
+//   startPixel,  hidePixel,     length,            dribblePixel
+    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
+    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
+    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
+    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
+    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
+    {30,          50,            20,                20},
 };
+/* clang-format on */
 
 void setup() {
   Serial.begin(115200);
@@ -299,4 +302,24 @@ void set(uint8_t strand, uint8_t d, uint8_t pixel, float brightness) {
   leds[strand * NUM_LEDS + pixel] = CRGB((int)((float)drips[d].color[0] * brightness + 0.5),
                                          (int)((float)drips[d].color[1] * brightness + 0.5),
                                          (int)((float)drips[d].color[2] * brightness + 0.5));
+
+  uint16_t insidePixel = NUM_LEDS;
+
+  // Find matching pixel on inside of apple
+  if (pixel < APPLE_LENGTH) {
+    float offset = (float)APPLE_LENGTH_INNER / (float)APPLE_LENGTH;
+    insidePixel = NUM_LEDS - pixel * offset;
+
+    // Find matching pixel on other side of drip
+  } else if (pixel >= APPLE_LENGTH && pixel < TOTAL_LENGTH) {
+    uint16_t dripIndex = pixel - APPLE_LENGTH;
+    insidePixel = TOTAL_LENGTH + DRIP_LENGTH - dripIndex;
+  }
+
+  if (insidePixel < NUM_LEDS) {
+    leds[strand * NUM_LEDS + insidePixel] =
+        CRGB((int)((float)drips[d].color[0] * brightness + 0.5),
+             (int)((float)drips[d].color[1] * brightness + 0.5),
+             (int)((float)drips[d].color[2] * brightness + 0.5));
+  }
 }

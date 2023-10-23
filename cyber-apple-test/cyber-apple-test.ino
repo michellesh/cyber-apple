@@ -16,8 +16,8 @@
 #define NUM_LEDS_STEM 31
 #define NUM_STRANDS 6
 
-#define DRIP_STICK_INDEX 65
-#define DRIP_STICK_LENGTH 18 // 36
+#define APPLE_LENGTH 65
+#define DRIP_LENGTH 18
 
 CRGB *leds;
 CRGB ledsStem[NUM_LEDS_STEM];
@@ -49,7 +49,7 @@ void loop() {
 
   for (int i = 0; i < NUM_STRANDS; i++) {
     for (int j = 0; j < NUM_LEDS; j++) {
-      bool dripStick = j >= DRIP_STICK_INDEX && j < DRIP_STICK_INDEX + DRIP_STICK_LENGTH * 2;
+      bool dripStick = j >= APPLE_LENGTH && j < APPLE_LENGTH + DRIP_LENGTH * 2;
       leds[i * NUM_LEDS + j] = dripStick ? CRGB::Black : colors[i];
     }
   }
