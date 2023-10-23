@@ -132,7 +132,8 @@ void loop() {
   uint32_t t = micros(); // Current time, in microseconds
 
   float x = 0.0; // multipurpose interim result
-  FastLED.clear();
+
+  setBackground();
 
   for (int i = 0; i < NUM_DRIPS; i++) {
     uint32_t dtUsec = t - drips[i].eventStartUsec; // Elapsed time, in microseconds, since
@@ -232,6 +233,16 @@ void loop() {
   }
 
   FastLED.show();
+}
+
+void setBackground() {
+  // Set the background to super dim red
+  FastLED.clear();
+  for (int i = 0; i < NUM_STRANDS; i++) {
+    for (int j = 0; j < NUM_LEDS; j++) {
+      leds[i * NUM_LEDS + j] = CRGB(5, 0, 0);
+    }
+  }
 }
 
 // This "draws" a drip in the NeoPixel buffer...zero to peak brightness
