@@ -35,8 +35,9 @@
 #define NUM_LEDS_STEM 31
 #define NUM_STRANDS 6
 
-#define DRIP_STICK_INDEX 65
-#define DRIP_STICK_LENGTH 13 // 36
+#define APPLE_LENGTH 65
+#define DRIP_LENGTH 13
+#define TOTAL_LENGTH APPLE_LENGTH + DRIP_LENGTH
 
 #define NUM_DRIPS 6
 
@@ -70,6 +71,7 @@ uint8_t palette[][3] = {
 
 struct Drip {
   uint16_t startPixel;
+  uint16_t hidePixel;
   uint16_t length;            // Length of NeoPixel strip IN PIXELS
   uint16_t dribblePixel;      // Index of pixel where dribble pauses before drop (0
                               // to length-1)
@@ -89,12 +91,13 @@ struct Drip {
 
 Drip drips[] = {
     // THIS TABLE CONTAINS INFO FOR UP TO 8 NEOPIXEL DRIPS
-    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
-    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
-    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
-    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
-    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
-    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
+//   startPixel, hidePixel,    length,           dribblePixel
+    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
+    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
+    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
+    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
+    {50,         TOTAL_LENGTH, 15 + DRIP_LENGTH, 15},
+    {30,         50,           20,               20},
 };
 
 void setup() {
@@ -115,6 +118,9 @@ void setup() {
   FastLED.setBrightness(BRIGHTNESS);
 
   for (int i = 0; i < NUM_DRIPS; i++) {
+    drips[i].height = 2;
+    drips[i].palette_min = 0;
+    drips[i].palette_max = 0;
     drips[i].mode = MODE_IDLE; // Start all drips in idle mode
     drips[i].eventStartUsec = 0;
     drips[i].eventDurationUsec = random(500000, 2500000); // Initial idle 0.5-2.5 sec
@@ -280,7 +286,9 @@ void dripDraw(uint8_t dNum, float a, float b, bool fade) {
     } else {
       x = 0.0;
     }
-    set(dNum, dNum, drips[dNum].startPixel + i, x);
+    if (drips[dNum].startPixel + i < drips[dNum].hidePixel) {
+      set(dNum, dNum, drips[dNum].startPixel + i, x);
+    }
   }
 }
 
