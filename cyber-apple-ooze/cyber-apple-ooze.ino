@@ -40,8 +40,6 @@
 #define DRIP_LENGTH 18
 #define TOTAL_LENGTH APPLE_LENGTH + DRIP_LENGTH
 
-#define NUM_DRIPS 6
-
 #define PIXEL_PITCH (1.0 / 150.0) // 150 pixels/m
 #define GAMMA 2.6                 // For linear brightness correction
 #define G_CONST 9.806             // Standard acceleration due to gravity
@@ -71,8 +69,7 @@ uint8_t palette[][3] = {
 #define NUM_COLORS (sizeof palette / sizeof palette[0])
 
 struct Drip {
-  uint16_t startPixel;
-  uint16_t hidePixel;
+  uint8_t strand;
   uint16_t length;            // Length of NeoPixel strip IN PIXELS
   uint16_t dribblePixel;      // Index of pixel where dribble pauses before drop (0
                               // to length-1)
@@ -90,16 +87,17 @@ struct Drip {
   uint8_t splatColor[3];      // RGB color of "splat" (may be from prior drip)
 };
 
+#define NUM_DRIPS 6
+#define MAX_DRIP 20.0
+
 /* clang-format off */
 Drip drips[] = {
-// THIS TABLE CONTAINS INFO FOR UP TO 8 NEOPIXEL DRIPS
-//   startPixel,  hidePixel,     length,            dribblePixel
-    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
-    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
-    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
-    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
-    {50,          TOTAL_LENGTH,  15 + DRIP_LENGTH,  15},
-    {30,          50,            20,                20},
+    {0, TOTAL_LENGTH, APPLE_LENGTH},
+    {1, TOTAL_LENGTH, APPLE_LENGTH},
+    {2, TOTAL_LENGTH, APPLE_LENGTH},
+    {3, TOTAL_LENGTH, APPLE_LENGTH},
+    {4, TOTAL_LENGTH, APPLE_LENGTH},
+    {5, TOTAL_LENGTH, APPLE_LENGTH},
 };
 /* clang-format on */
 
@@ -142,6 +140,7 @@ void loop() {
   uint32_t t = micros(); // Current time, in microseconds
 
   float x = 0.0; // multipurpose interim result
+  float start = 0.0;
 
   setBackground();
 
@@ -181,7 +180,7 @@ void loop() {
       case MODE_DRIBBLING_1:
         drips[i].mode = MODE_DRIBBLING_2; // Dripping 1st half to 2nd half transition
         drips[i].eventDurationUsec =
-            drips[i].eventDurationUsec * 3 / 2; // Second half is 1/3 slower
+            drips[i].eventDurationUsec * 1; // * 3 / 2; // Second half is 1/3 slower
         drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
         break;
       case MODE_DRIBBLING_2:
@@ -216,13 +215,25 @@ void loop() {
       // Point b moves from first to second pixel over event time
       x = dtReal / drips[i].eventDurationReal; // 0.0 to 1.0 during move
       x = 3 * x * x - 2 * x * x * x;           // Easing function: 3*x^2-2*x^3 0.0 to 1.0
-      dripDraw(i, 0.0, x * drips[i].dribblePixel, false);
+      start = x * drips[i].dribblePixel < MAX_DRIP ? 0.0 : x * drips[i].dribblePixel - MAX_DRIP;
+      EVERY_N_MILLISECONDS(100) {
+        if (i == 0) {
+          Serial.println(start);
+        }
+      }
+      dripDraw(i, start, x * drips[i].dribblePixel, false);
       break;
     case MODE_DRIBBLING_2:
       // Point a moves from first to second pixel over event time
       x = dtReal / drips[i].eventDurationReal; // 0.0 to 1.0 during move
       x = 3 * x * x - 2 * x * x * x;           // Easing function: 3*x^2-2*x^3 0.0 to 1.0
-      dripDraw(i, x * drips[i].dribblePixel, drips[i].dribblePixel, false);
+      start = mapf(x, 0.0, 1.0, drips[i].dribblePixel - MAX_DRIP, drips[i].dribblePixel);
+      EVERY_N_MILLISECONDS(100) {
+        if (i == 0) {
+          Serial.println(start);
+        }
+      }
+      dripDraw(i, start, drips[i].dribblePixel, false);
       break;
     case MODE_DRIPPING:
       x = 0.5 * G_CONST * dtReal * dtReal;         // Position in meters
@@ -289,9 +300,7 @@ void dripDraw(uint8_t dNum, float a, float b, bool fade) {
     } else {
       x = 0.0;
     }
-    if (drips[dNum].startPixel + i < drips[dNum].hidePixel) {
-      set(dNum, dNum, drips[dNum].startPixel + i, x);
-    }
+    set(dNum, dNum, i, x);
   }
 }
 
