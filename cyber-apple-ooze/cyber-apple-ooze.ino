@@ -69,6 +69,7 @@ uint8_t palette[][3] = {
 #define NUM_COLORS (sizeof palette / sizeof palette[0])
 
 struct Drip {
+  uint16_t startPixel;
   uint16_t length;            // Length of NeoPixel strip IN PIXELS
   uint16_t dribblePixel;      // Index of pixel where dribble pauses before drop (0
                               // to length-1)
@@ -88,12 +89,12 @@ struct Drip {
 
 Drip drips[] = {
     // THIS TABLE CONTAINS INFO FOR UP TO 8 NEOPIXEL DRIPS
-    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
-    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
-    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
-    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
-    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
-    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
+    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
+    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
+    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
+    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
+    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
+    {50, 15 + DRIP_STICK_LENGTH, 15, 2, 0, 0},
 };
 
 void setup() {
@@ -279,7 +280,7 @@ void dripDraw(uint8_t dNum, float a, float b, bool fade) {
     } else {
       x = 0.0;
     }
-    set(dNum, dNum, i, x);
+    set(dNum, dNum, drips[dNum].startPixel + i, x);
   }
 }
 
