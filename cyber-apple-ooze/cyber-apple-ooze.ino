@@ -17,15 +17,28 @@
 // See here: https://learn.adafruit.com/adafruit-neopxl8-featherwing-and-library
 // Requires Adafruit_NeoPixel, Adafruit_NeoPXL8 and Adafruit_ZeroDMA libraries.
 
+#define FASTLED_ESP8266_NODEMCU_PIN_ORDER
 #include <FastLED.h>
 
-#define DATA_PIN 4
-#define LED_TYPE NEOPIXEL
-#define COLOR_ORDER GRB
-#define BRIGHTNESS 255
+#define PIN_1 2
+#define PIN_2 4
+#define PIN_3 7
+#define PIN_4 8
+#define PIN_5 6
+#define PIN_6 5
+#define PIN_STEM 3
 
-#define NUM_LEDS 51
-#define NUM_DRIPS 1 // 7
+#define LED_TYPE NEOPIXEL
+#define BRIGHTNESS 200
+
+#define NUM_LEDS 177
+#define NUM_LEDS_STEM 31
+#define NUM_STRANDS 6
+
+#define DRIP_STICK_INDEX 65
+#define DRIP_STICK_LENGTH 13 // 36
+
+#define NUM_DRIPS 6
 
 #define PIXEL_PITCH (1.0 / 150.0) // 150 pixels/m
 #define GAMMA 2.6                 // For linear brightness correction
@@ -34,7 +47,8 @@
 // back for a more theatric effect / to slow the drips like they've still got
 // a syrupy "drool string" attached (try much lower values like 2.0 to 3.0).
 
-CRGB leds[NUM_LEDS];
+CRGB *leds;
+CRGB ledsStem[NUM_LEDS_STEM];
 
 float mapf(float value, float inMin, float inMax, float outMin, float outMax) {
   float percentage = (value - inMin) / (inMax - inMin);
@@ -50,7 +64,7 @@ typedef enum {
 } dropState;
 
 uint8_t palette[][3] = {
-    {0, 255, 0}, // Bright green ectoplasm
+    {255, 0, 0}, // Red
 };
 #define NUM_COLORS (sizeof palette / sizeof palette[0])
 
@@ -74,26 +88,29 @@ struct Drip {
 
 Drip drips[] = {
     // THIS TABLE CONTAINS INFO FOR UP TO 8 NEOPIXEL DRIPS
-    {16, 7, 0.157, 0, 0}, // NeoPXL8 output 0: 16 pixels long, drip pauses at index 7, 0.157
-                          // meters above ground, use palette colors 0-0
-    //{19, 6, 0.174, 0, 0},  // NeoPXL8 output 1: 19 pixels long, pause at index 6, 0.174 meters up
-    //{18, 5, 0.195, 0, 0},  // NeoPXL8 output 2: etc.
-    //{17, 6, 0.16, 0, 0},   // NeoPXL8 output 3
-    //{16, 1, 0.21, 0, 0},   // NeoPXL8 output 4
-    //{16, 1, 0.21, 0, 0},   // NeoPXL8 output 5
-    //{21, 10, 0.143, 0, 0}, // NeoPXL8 output 6
-    // NeoPXL8 output 7 is normally reserved for ground splats
-    // You CAN add an eighth drip here, but then will not get splats
+    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
+    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
+    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
+    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
+    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
+    {DRIP_STICK_INDEX + DRIP_STICK_LENGTH, DRIP_STICK_INDEX, 2, 0, 0},
 };
-
-int longestStrand = (NUM_DRIPS < 8) ? NUM_DRIPS : 0;
-uint8_t splatmap[] = {50, 1, 2, 3, 4, 5, 6}; // TODO change 50 back to 0
 
 void setup() {
   Serial.begin(115200);
   randomSeed(analogRead(0));
 
-  FastLED.addLeds<LED_TYPE, DATA_PIN>(leds, NUM_LEDS);
+  leds = new CRGB[NUM_STRANDS * NUM_LEDS];
+
+  FastLED.addLeds<LED_TYPE, PIN_1>(leds, 0, NUM_LEDS);
+  FastLED.addLeds<LED_TYPE, PIN_2>(leds, NUM_LEDS, NUM_LEDS);
+  FastLED.addLeds<LED_TYPE, PIN_3>(leds, NUM_LEDS * 2, NUM_LEDS);
+  FastLED.addLeds<LED_TYPE, PIN_4>(leds, NUM_LEDS * 3 + 1,
+                                   NUM_LEDS); // strand 4 is shorter by 1 pixel
+  FastLED.addLeds<LED_TYPE, PIN_5>(leds, NUM_LEDS * 4, NUM_LEDS);
+  FastLED.addLeds<LED_TYPE, PIN_6>(leds, NUM_LEDS * 5, NUM_LEDS);
+  FastLED.addLeds<LED_TYPE, PIN_STEM>(ledsStem, NUM_LEDS_STEM);
+
   FastLED.setBrightness(BRIGHTNESS);
 
   for (int i = 0; i < NUM_DRIPS; i++) {
@@ -103,11 +120,6 @@ void setup() {
     drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
     drips[i].splatStartUsec = 0;
     drips[i].splatDurationUsec = 0;
-
-    if (drips[i].length > longestStrand)
-      longestStrand = drips[i].length;
-    if ((splatmap[i] + 1) > longestStrand)
-      longestStrand = splatmap[i] + 1;
 
     // Randomize initial color:
     memcpy(drips[i].color, palette[random(drips[i].palette_min, drips[i].palette_max + 1)],
@@ -214,7 +226,7 @@ void loop() {
                                             // since start of splat
       if (dtUsec < drips[i].splatDurationUsec) {
         x = 1.0 - sqrt((float)dtUsec / (float)drips[i].splatDurationUsec);
-        set(0, i, splatmap[i], x); // TODO change first param 0 back to 7
+        // set(7, i, splatmap[i], x);
       }
     }
   }
@@ -264,14 +276,7 @@ void dripDraw(uint8_t dNum, float a, float b, bool fade) {
 // Strand # and drip # are BOTH passed in because "splats" are always
 // on strand 7 but colors come from drip indices.
 void set(uint8_t strand, uint8_t d, uint8_t pixel, float brightness) {
-  if ((strand < 7) || (NUM_DRIPS >= 8)) {
-    leds[pixel + strand * longestStrand] = CRGB((int)((float)drips[d].color[0] * brightness + 0.5),
-                                                (int)((float)drips[d].color[1] * brightness + 0.5),
-                                                (int)((float)drips[d].color[2] * brightness + 0.5));
-  } else {
-    leds[pixel + strand * longestStrand] =
-        CRGB((int)((float)drips[d].splatColor[0] * brightness + 0.5),
-             (int)((float)drips[d].splatColor[1] * brightness + 0.5),
-             (int)((float)drips[d].splatColor[2] * brightness + 0.5));
-  }
+  leds[strand * NUM_LEDS + pixel] = CRGB((int)((float)drips[d].color[0] * brightness + 0.5),
+                                         (int)((float)drips[d].color[1] * brightness + 0.5),
+                                         (int)((float)drips[d].color[2] * brightness + 0.5));
 }
