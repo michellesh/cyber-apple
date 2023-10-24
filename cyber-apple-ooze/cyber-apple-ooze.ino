@@ -73,6 +73,7 @@ struct Drip {
   uint16_t length;            // Length of NeoPixel strip IN PIXELS
   uint16_t dribblePixel;      // Index of pixel where dribble pauses before drop (0
                               // to length-1)
+  float maxDrip;
   float height;               // Height IN METERS of dribblePixel above ground
   uint16_t palette_min;       // Lower color palette index for this strip
   uint16_t palette_max;       // Upper color palette index for this strip
@@ -92,12 +93,12 @@ struct Drip {
 
 /* clang-format off */
 Drip drips[] = {
-    {0, TOTAL_LENGTH, APPLE_LENGTH},
-    {1, TOTAL_LENGTH, APPLE_LENGTH},
-    {2, TOTAL_LENGTH, APPLE_LENGTH},
-    {3, TOTAL_LENGTH, APPLE_LENGTH},
-    {4, TOTAL_LENGTH, APPLE_LENGTH},
-    {5, TOTAL_LENGTH, APPLE_LENGTH},
+    {0, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
+    {1, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
+    {2, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
+    {3, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
+    {4, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
+    {5, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
 };
 /* clang-format on */
 
@@ -134,7 +135,6 @@ void setup() {
            sizeof palette[0]);
     memcpy(drips[i].splatColor, drips[i].color, sizeof palette[0]);
   }
-
 }
 
 void loop() {
@@ -160,6 +160,7 @@ void loop() {
       switch (drips[i].mode) { // Current mode...about to switch to next mode...
       case MODE_IDLE:
         drips[i].mode = MODE_OOZING;                          // Idle to oozing transition
+        drips[i].maxDrip = random(20, 40);
         drips[i].eventDurationUsec = random(800000, 1200000); // 0.8 to 1.2 sec ooze
         drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
         // Randomize next drip color from palette settings:
@@ -171,6 +172,7 @@ void loop() {
           drips[i].mode = MODE_DRIBBLING_1; // Oozing to dribbling transition
           drips[i].pos = (float)drips[i].dribblePixel;
           drips[i].eventDurationUsec = 250000 + drips[i].dribblePixel * random(30000, 40000);
+          drips[i].eventDurationUsec *= (float)random(10, 20) / 10; // multiply by 1.0 - 2.0
           drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
         } else {                                       // No dribblePixel...
           drips[i].pos = (float)drips[i].dribblePixel; // Oozing to dripping transition
@@ -181,8 +183,7 @@ void loop() {
         break;
       case MODE_DRIBBLING_1:
         drips[i].mode = MODE_DRIBBLING_2; // Dripping 1st half to 2nd half transition
-        drips[i].eventDurationUsec =
-            drips[i].eventDurationUsec * (float)random(15, 50)/100; // * 3 / 2; // Second half is 1/3 slower
+        drips[i].eventDurationUsec *= (float)random(15, 50) / 100; // multiply by 0.15 - 0.5
         drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
         break;
       case MODE_DRIBBLING_2:
@@ -217,7 +218,7 @@ void loop() {
       // Point b moves from first to second pixel over event time
       x = dtReal / drips[i].eventDurationReal; // 0.0 to 1.0 during move
       x = 3 * x * x - 2 * x * x * x;           // Easing function: 3*x^2-2*x^3 0.0 to 1.0
-      maxDrip = mapf(x, 0.0, 1.0, MAX_DRIP, 1);
+      maxDrip = mapf(x, 0.0, 1.0, drips[i].maxDrip, 1);
       start = x * drips[i].dribblePixel < maxDrip ? 0.0 : x * drips[i].dribblePixel - maxDrip;
       EVERY_N_MILLISECONDS(100) {
         if (i == 0) {
