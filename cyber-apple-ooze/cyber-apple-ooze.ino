@@ -88,7 +88,7 @@ struct Drip {
 };
 
 #define NUM_DRIPS 6
-#define MAX_DRIP 20.0
+#define MAX_DRIP 30.0
 
 /* clang-format off */
 Drip drips[] = {
@@ -141,6 +141,7 @@ void loop() {
 
   float x = 0.0; // multipurpose interim result
   float start = 0.0;
+  float maxDrip = 0.0;
 
   setBackground();
 
@@ -180,7 +181,7 @@ void loop() {
       case MODE_DRIBBLING_1:
         drips[i].mode = MODE_DRIBBLING_2; // Dripping 1st half to 2nd half transition
         drips[i].eventDurationUsec =
-            drips[i].eventDurationUsec * 1; // * 3 / 2; // Second half is 1/3 slower
+            drips[i].eventDurationUsec * (float)random(15, 50)/100; // * 3 / 2; // Second half is 1/3 slower
         drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
         break;
       case MODE_DRIBBLING_2:
@@ -215,7 +216,8 @@ void loop() {
       // Point b moves from first to second pixel over event time
       x = dtReal / drips[i].eventDurationReal; // 0.0 to 1.0 during move
       x = 3 * x * x - 2 * x * x * x;           // Easing function: 3*x^2-2*x^3 0.0 to 1.0
-      start = x * drips[i].dribblePixel < MAX_DRIP ? 0.0 : x * drips[i].dribblePixel - MAX_DRIP;
+      maxDrip = mapf(x, 0.0, 1.0, MAX_DRIP, 1);
+      start = x * drips[i].dribblePixel < maxDrip ? 0.0 : x * drips[i].dribblePixel - maxDrip;
       EVERY_N_MILLISECONDS(100) {
         if (i == 0) {
           Serial.println(start);
@@ -227,7 +229,7 @@ void loop() {
       // Point a moves from first to second pixel over event time
       x = dtReal / drips[i].eventDurationReal; // 0.0 to 1.0 during move
       x = 3 * x * x - 2 * x * x * x;           // Easing function: 3*x^2-2*x^3 0.0 to 1.0
-      start = mapf(x, 0.0, 1.0, drips[i].dribblePixel - MAX_DRIP, drips[i].dribblePixel);
+      start = mapf(x, 0.0, 1.0, drips[i].dribblePixel - 1, drips[i].dribblePixel);
       EVERY_N_MILLISECONDS(100) {
         if (i == 0) {
           Serial.println(start);
