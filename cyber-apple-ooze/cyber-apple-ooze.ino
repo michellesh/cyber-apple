@@ -69,11 +69,11 @@ uint8_t palette[][3] = {
 #define NUM_COLORS (sizeof palette / sizeof palette[0])
 
 struct Drip {
-  uint8_t strand;
+  uint8_t strand;             // Which strand is this drip on
   uint16_t length;            // Length of NeoPixel strip IN PIXELS
   uint16_t dribblePixel;      // Index of pixel where dribble pauses before drop (0
                               // to length-1)
-  float maxDrip;
+  float maxDrip;              // How many pixels long is the drip at its longest
   float height;               // Height IN METERS of dribblePixel above ground
   uint16_t palette_min;       // Lower color palette index for this strip
   uint16_t palette_max;       // Upper color palette index for this strip
@@ -89,16 +89,17 @@ struct Drip {
 };
 
 #define NUM_DRIPS 6
-#define MAX_DRIP 30.0
+#define MIN_DRIP 20.0
+#define MAX_DRIP 40.0
 
 /* clang-format off */
 Drip drips[] = {
-    {0, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
-    {1, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
-    {2, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
-    {3, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
-    {4, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
-    {5, TOTAL_LENGTH, APPLE_LENGTH, MAX_DRIP},
+    {0, TOTAL_LENGTH, APPLE_LENGTH},
+    {1, TOTAL_LENGTH, APPLE_LENGTH},
+    {2, TOTAL_LENGTH, APPLE_LENGTH},
+    {3, TOTAL_LENGTH, APPLE_LENGTH},
+    {4, TOTAL_LENGTH, APPLE_LENGTH},
+    {5, TOTAL_LENGTH, APPLE_LENGTH},
 };
 /* clang-format on */
 
@@ -159,8 +160,8 @@ void loop() {
       dtReal = (float)dtUsec / 1000000.0;
       switch (drips[i].mode) { // Current mode...about to switch to next mode...
       case MODE_IDLE:
-        drips[i].mode = MODE_OOZING;                          // Idle to oozing transition
-        drips[i].maxDrip = random(20, 40);
+        drips[i].mode = MODE_OOZING; // Idle to oozing transition
+        drips[i].maxDrip = random(MIN_DRIP, MAX_DRIP);
         drips[i].eventDurationUsec = random(800000, 1200000); // 0.8 to 1.2 sec ooze
         drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
         // Randomize next drip color from palette settings:
@@ -172,7 +173,8 @@ void loop() {
           drips[i].mode = MODE_DRIBBLING_1; // Oozing to dribbling transition
           drips[i].pos = (float)drips[i].dribblePixel;
           drips[i].eventDurationUsec = 250000 + drips[i].dribblePixel * random(30000, 40000);
-          drips[i].eventDurationUsec *= (float)random(10, 20) / 10; // multiply by 1.0 - 2.0
+          drips[i].eventDurationUsec *=
+              mapf(drips[i].maxDrip, MAX_DRIP, MIN_DRIP, 1.0, 2.0); // multiply by 1.0 - 2.0
           drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
         } else {                                       // No dribblePixel...
           drips[i].pos = (float)drips[i].dribblePixel; // Oozing to dripping transition
@@ -183,7 +185,8 @@ void loop() {
         break;
       case MODE_DRIBBLING_1:
         drips[i].mode = MODE_DRIBBLING_2; // Dripping 1st half to 2nd half transition
-        drips[i].eventDurationUsec *= (float)random(15, 50) / 100; // multiply by 0.15 - 0.5
+        drips[i].eventDurationUsec *=
+            mapf(drips[i].maxDrip, MAX_DRIP, MIN_DRIP, 0.05, 0.5); // multiply by 0.05 - 0.5
         drips[i].eventDurationReal = (float)drips[i].eventDurationUsec / 1000000.0;
         break;
       case MODE_DRIBBLING_2:
