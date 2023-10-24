@@ -134,6 +134,7 @@ void setup() {
            sizeof palette[0]);
     memcpy(drips[i].splatColor, drips[i].color, sizeof palette[0]);
   }
+
 }
 
 void loop() {
@@ -263,8 +264,16 @@ void setBackground() {
   FastLED.clear();
   for (int i = 0; i < NUM_STRANDS; i++) {
     for (int j = 0; j < NUM_LEDS; j++) {
-      leds[i * NUM_LEDS + j] = CRGB(5, 0, 0);
+      if (j >= APPLE_LENGTH && j < APPLE_LENGTH + DRIP_LENGTH * 2) {
+        leds[i * NUM_LEDS + j] = CRGB::Black;
+      } else {
+        leds[i * NUM_LEDS + j] = CRGB(5, 0, 0);
+      }
     }
+  }
+  for (int i = 0; i < NUM_LEDS_STEM; i++) {
+    CRGB stemColor = CRGB::Sienna;
+    ledsStem[i] = stemColor.nscale8(20);
   }
 }
 
