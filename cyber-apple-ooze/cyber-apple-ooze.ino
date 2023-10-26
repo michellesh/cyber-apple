@@ -223,11 +223,6 @@ void loop() {
       x = 3 * x * x - 2 * x * x * x;           // Easing function: 3*x^2-2*x^3 0.0 to 1.0
       maxDrip = mapf(x, 0.0, 1.0, drips[i].maxDrip, 1);
       start = x * drips[i].dribblePixel < maxDrip ? 0.0 : x * drips[i].dribblePixel - maxDrip;
-      EVERY_N_MILLISECONDS(100) {
-        if (i == 0) {
-          Serial.println(start);
-        }
-      }
       dripDraw(i, start, x * drips[i].dribblePixel, false);
       break;
     case MODE_DRIBBLING_2:
@@ -235,11 +230,6 @@ void loop() {
       x = dtReal / drips[i].eventDurationReal; // 0.0 to 1.0 during move
       x = 3 * x * x - 2 * x * x * x;           // Easing function: 3*x^2-2*x^3 0.0 to 1.0
       start = mapf(x, 0.0, 1.0, drips[i].dribblePixel - 1, drips[i].dribblePixel);
-      EVERY_N_MILLISECONDS(100) {
-        if (i == 0) {
-          Serial.println(start);
-        }
-      }
       dripDraw(i, start, drips[i].dribblePixel, false);
       break;
     case MODE_DRIPPING:
@@ -276,7 +266,7 @@ void setBackground() {
     }
   }
   for (int i = 0; i < NUM_LEDS_STEM; i++) {
-    CRGB stemColor = CRGB::Sienna;
+    CRGB stemColor = CRGB(145, 74, 3); // Dark orange
     ledsStem[i] = stemColor.nscale8(20);
   }
 }
